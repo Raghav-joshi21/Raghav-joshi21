@@ -13,8 +13,8 @@ jobs:
         with:
           github_user_name: Raghav-joshi21
           outputs: |
-            dist/pacman-contribution-graph.svg
-            dist/pacman-contribution-graph-dark.svg?palette=github-dark
+            dist/pacman-contribution-graph.svg?type=pacman
+            dist/pacman-contribution-graph-dark.svg?palette=github-dark&type=pacman
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
