@@ -36,7 +36,6 @@ def get_contributions():
         date = week["contributionDays"][0]["date"]
         month = datetime.strptime(date, "%Y-%m-%d").strftime("%b")
         result.append({"commits": total, "date": date, "month": month})
-    # label only first occurrence of each month
     seen = set()
     for w in result:
         if w["month"] not in seen:
@@ -54,7 +53,6 @@ def generate_svg(weeks):
     W = COLS * PX
     H = ROWS * PX
 
-    # pixel buffer
     buf = [[None]*COLS for _ in range(ROWS)]
 
     def px(x, y, c):
@@ -74,19 +72,24 @@ def generate_svg(weeks):
         'g1':'#1b5e20','g2':'#2e7d32','g3':'#43a047','g4':'#66bb6a',
         'stem':'#33691e','stem2':'#558b2f',
         'leaf':'#388e3c','leaf2':'#2e7d32','leaf3':'#1b5e20',
+        # yellow flower petals
         'py1':'#fff176','py2':'#ffee58','py3':'#fdd835','py4':'#f9a825',
-        'yc1':'#6d4c41','yc2':'#4e342e','yc3':'#3e2723',
-        'po1':'#ffcc02','po2':'#ffa000','po3':'#e65100','po4':'#bf360c',
-        'oc1':'#4e342e','oc2':'#3e2723','oc3':'#1a0000',
-        'pr1':'#ff8f00','pr2':'#e65100','pr3':'#bf360c','pr4':'#7f0000',
-        'rc1':'#3e2723','rc2':'#1a0000','rc3':'#0d0000',
+        # yellow center — warm amber
+        'yc1':'#ff8f00','yc2':'#e65100','yc3':'#bf360c',
+        # orange flower petals
+        'po1':'#ffcc02','po2':'#ffa000','po3':'#e65100',
+        # orange center — deep amber
+        'oc1':'#bf360c','oc2':'#8d2c02','oc3':'#6d1f00',
+        # red flower petals
+        'pr1':'#ff8f00','pr2':'#e65100','pr3':'#bf360c',
+        # red center — warm orange-brown
+        'rc1':'#bf360c','rc2':'#8d2c02','rc3':'#5d1f00',
     }
 
     def draw_sky():
         skys = [C['sky1'],C['sky2'],C['sky3'],C['sky4'],C['sky5']]
         for r in range(GY):
-            t = r / GY
-            si = min(int(t * len(skys)), len(skys)-1)
+            si = min(int(r/GY*len(skys)), len(skys)-1)
             row(0, r, COLS, skys[si])
 
     def draw_sun(sx, sy):
@@ -123,10 +126,11 @@ def generate_svg(weeks):
         px(bx-3, fy+2, C['py4']); px(bx+3, fy+2, C['py4'])
         px(bx-2, fy+1, C['py2']); px(bx+2, fy+1, C['py2'])
         px(bx-2, fy+4, C['py2']); px(bx+2, fy+4, C['py2'])
+        # warm amber center
         blk(bx-1, fy+1, 3, 3, C['yc1'])
-        blk(bx-1, fy+2, 3, 1, C['yc2'])
+        px(bx-1, fy+2, C['yc2']); px(bx+1, fy+2, C['yc2'])
         px(bx, fy+2, C['yc3'])
-        px(bx-1, fy+1, C['yc2']); px(bx+1, fy+1, C['yc2'])
+        px(bx-1, fy+1, '#ffca28')  # highlight
 
     def flower_orange(bx, fy):
         row(bx-1, fy-1, 3, C['po1'])
@@ -136,9 +140,11 @@ def generate_svg(weeks):
         row(bx-1, fy+7, 3, C['po1'])
         blk(bx-4, fy+1, 2, 5, C['po3'])
         blk(bx+3, fy+1, 2, 5, C['po3'])
+        # amber center
         blk(bx-2, fy+1, 5, 5, C['oc1'])
         blk(bx-1, fy+2, 3, 3, C['oc2'])
         px(bx, fy+3, C['oc3'])
+        px(bx-2, fy+1, '#ff8f00'); px(bx-1, fy+1, '#ffa000')  # highlight
 
     def flower_red(bx, fy):
         row(bx-2, fy-2, 5, C['pr1'])
@@ -150,11 +156,14 @@ def generate_svg(weeks):
         row(bx-2, fy+9, 5, C['pr1'])
         blk(bx-5, fy+1, 2, 6, C['pr3'])
         blk(bx+4, fy+1, 2, 6, C['pr3'])
+        # warm orange-brown center
         blk(bx-3, fy+1, 7, 6, C['rc1'])
         blk(bx-2, fy+2, 5, 4, C['rc2'])
         blk(bx-1, fy+3, 3, 2, C['rc3'])
-        px(bx-2, fy+2, C['rc1']); px(bx+2, fy+2, C['rc1'])
-        px(bx-2, fy+5, C['rc1']); px(bx+2, fy+5, C['rc1'])
+        px(bx-2, fy+2, '#e65100'); px(bx+2, fy+2, '#e65100')
+        px(bx-2, fy+5, '#e65100'); px(bx+2, fy+5, '#e65100')
+        px(bx, fy+1, '#ff8f00'); px(bx, fy+6, '#ff8f00')
+        px(bx-1, fy+2, '#ffa000'); px(bx, fy+2, '#ffb300'); px(bx+1, fy+2, '#ffa000')
 
     def draw_flower(bx, commits):
         if commits == 0: return
@@ -178,7 +187,6 @@ def generate_svg(weeks):
         elif commits >= 5: flower_orange(bx, head_y - 6)
         else: flower_yellow(bx, head_y - 4)
 
-    # Draw everything
     draw_sky()
     draw_sun(130, 6)
     draw_cloud(4, 8); draw_cloud(44, 5); draw_cloud(90, 9)
@@ -188,26 +196,20 @@ def generate_svg(weeks):
         x = round(4 + i * (COLS - 8) / len(weeks))
         draw_flower(x, week["commits"])
 
-    # Build SVG rects
     rects = []
     for r in range(ROWS):
         for c in range(COLS):
             color = buf[r][c] or (C['sky5'] if r < GY else C['g1'])
-            rx = c * PX + 1
-            ry = r * PX + 1
-            rects.append(f'<rect x="{rx}" y="{ry}" width="{PX-1}" height="{PX-1}" fill="{color}"/>')
+            rects.append(f'<rect x="{c*PX+1}" y="{r*PX+1}" width="{PX-1}" height="{PX-1}" fill="{color}"/>')
 
-    # Month labels
     month_texts = []
     for i, week in enumerate(weeks):
         if week["label"]:
             x = (4 + i * (COLS - 8) / len(weeks)) * PX
             month_texts.append(f'<text x="{x:.1f}" y="{H - PX*3}" font-family="monospace" font-size="{PX+1}" font-weight="bold" fill="#90caf9">{week["label"]}</text>')
 
-    # Title
     title_text = f'<text x="{W//2}" y="{H - PX + 2}" font-family="monospace" font-size="{PX*2}" font-weight="bold" fill="#ffe066" text-anchor="middle">Raghav\'s Contribution Garden</text>'
 
-    # Legend
     legend = f'''
 <rect x="{PX}" y="{PX}" width="{PX*22}" height="{PX*3}" fill="rgba(0,0,0,0.7)"/>
 <rect x="{PX+2}" y="{PX+4}" width="{PX-1}" height="{PX-1}" fill="#fdd835"/>
@@ -215,10 +217,9 @@ def generate_svg(weeks):
 <rect x="{PX*2+76}" y="{PX+4}" width="{PX-1}" height="{PX-1}" fill="#ffa000"/>
 <text x="{PX*2+78+PX}" y="{PX*2+3}" font-family="monospace" font-size="{PX}" font-weight="bold" fill="white">5-8</text>
 <rect x="{PX*2+152}" y="{PX+4}" width="{PX-1}" height="{PX-1}" fill="#e65100"/>
-<text x="{PX*2+154+PX}" y="{PX*2+3}" font-family="monospace" font-size="{PX}" font-weight="bold" fill="white">9+</text>
-'''
+<text x="{PX*2+154+PX}" y="{PX*2+3}" font-family="monospace" font-size="{PX}" font-weight="bold" fill="white">9+</text>'''
 
-    svg = f'''<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">
+    return f'''<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">
 <rect width="{W}" height="{H}" fill="#111111"/>
 {''.join(rects)}
 <rect x="0" y="{H - PX*5}" width="{W}" height="{PX*5}" fill="rgba(0,0,0,0.72)"/>
@@ -226,8 +227,6 @@ def generate_svg(weeks):
 {title_text}
 {legend}
 </svg>'''
-
-    return svg
 
 if __name__ == "__main__":
     print("Fetching contributions...")
