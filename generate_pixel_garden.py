@@ -53,7 +53,6 @@ def hex_to_rgb(h):
 def generate_gif(weeks):
     from PIL import Image, ImageDraw, ImageFont
 
-
     PX = 6
     COLS = 170
     ROWS = 82
@@ -74,25 +73,29 @@ def generate_gif(weeks):
         'oc1': '#bf360c', 'oc2': '#8d2c02', 'oc3': '#6d1f00',
         'pr1': '#ff8f00', 'pr2': '#e65100', 'pr3': '#bf360c',
         'rc1': '#bf360c', 'rc2': '#8d2c02', 'rc3': '#5d1f00',
-        'black': '#111111',
     }
 
     spacing = math.floor((COLS - 8) / len(weeks))
     flower_positions = [4 + i * spacing for i in range(len(weeks))]
 
-    # cloud positions
     cloud_configs = [
-        {'x': 10.0, 'y': 7, 'speed': 0.4, 'w': 13},
-        {'x': 60.0, 'y': 4, 'speed': 0.25, 'w': 16},
-        {'x': 120.0, 'y': 8, 'speed': 0.35, 'w': 13},
-        {'x': 85.0, 'y': 12, 'speed': 0.2, 'w': 11},
+        {'x': 10.0, 'y': 7,  'speed': 0.4,  'w': 13},
+        {'x': 60.0, 'y': 4,  'speed': 0.25, 'w': 16},
+        {'x':120.0, 'y': 8,  'speed': 0.35, 'w': 13},
+        {'x': 85.0, 'y': 12, 'speed': 0.2,  'w': 11},
     ]
 
-    # sway phases
     sway_phases = [i * 0.7 for i in range(len(weeks))]
     sway_speeds = [0.015 + (i % 7) * 0.003 for i in range(len(weeks))]
 
-    def make_frame(frame_num, cloud_positions, grow_frac, sway_frame):
+    # --- TOTAL_FRAMES split:
+    # frames 0-29:  grow animation (1 second at 30ms/frame)
+    # frames 30-99: cloud + sway loop (70 frames = ~2.1s, loops forever)
+    GROW_FRAMES = 30
+    LOOP_FRAMES = 70
+    TOTAL_FRAMES = GROW_FRAMES + LOOP_FRAMES
+
+    def make_frame(frame_num, cloud_positions, grow_frac, sway_t):
         buf = [[None]*COLS for _ in range(ROWS)]
 
         def p(x, y, c):
@@ -106,97 +109,95 @@ def generate_gif(weeks):
             for r in range(h): row(x, y+r, w, c)
 
         # sky
-        skys = C['sky']
         for r in range(GY):
-            si = min(int(r/GY*len(skys)), len(skys)-1)
-            row(0, r, COLS, skys[si])
+            si = min(int(r/GY*5), 4)
+            row(0, r, COLS, C['sky'][si])
 
         # sun
         sx, sy = 154, 6
-        row(sx+1, sy-3, 5, C['sun']); row(sx+1, sy+7, 5, C['sun'])
-        blk(sx-2, sy-1, 2, 7, C['sun']); blk(sx+7, sy-1, 2, 7, C['sun'])
-        blk(sx, sy-2, 7, 9, C['sun']); blk(sx-1, sy-1, 9, 7, C['sun'])
-        blk(sx+1, sy-1, 3, 3, C['sunhi'])
+        row(sx+1,sy-3,5,C['sun']); row(sx+1,sy+7,5,C['sun'])
+        blk(sx-2,sy-1,2,7,C['sun']); blk(sx+7,sy-1,2,7,C['sun'])
+        blk(sx,sy-2,7,9,C['sun']); blk(sx-1,sy-1,9,7,C['sun'])
+        blk(sx+1,sy-1,3,3,C['sunhi'])
 
         # clouds
         def draw_cloud(cx, cy):
-            x, y = int(cx), int(cy)
-            blk(x+3, y, 6, 2, C['cloudsh']); blk(x+1, y+1, 10, 2, C['cloudsh'])
-            blk(x, y+2, 13, 3, C['cloud']); blk(x+2, y+1, 9, 4, C['cloud'])
-            blk(x+4, y, 6, 5, C['cloud'])
+            x,y = int(cx),int(cy)
+            blk(x+3,y,6,2,C['cloudsh']); blk(x+1,y+1,10,2,C['cloudsh'])
+            blk(x,y+2,13,3,C['cloud']); blk(x+2,y+1,9,4,C['cloud'])
+            blk(x+4,y,6,5,C['cloud'])
 
-        for ci, cl in enumerate(cloud_positions):
+        for cl in cloud_positions:
             draw_cloud(cl['x'], cl['y'])
 
         # ground
-        blk(0, GY, COLS, ROWS-GY, C['g1'])
-        row(0, GY, COLS, C['g3']); row(0, GY+1, COLS, C['g2'])
-        for x in range(0, COLS, 3): p(x, GY-1, C['g3'])
-        for x in range(1, COLS, 5):
-            p(x, GY-2, C['g4'])
-            if x+2 < COLS: p(x+2, GY-3, C['g3'])
+        blk(0,GY,COLS,ROWS-GY,C['g1'])
+        row(0,GY,COLS,C['g3']); row(0,GY+1,COLS,C['g2'])
+        for x in range(0,COLS,3): p(x,GY-1,C['g3'])
+        for x in range(1,COLS,5):
+            p(x,GY-2,C['g4'])
+            if x+2<COLS: p(x+2,GY-3,C['g3'])
 
-        def flower_yellow(bx, fy):
-            row(bx-1, fy, 3, C['py1'])
-            blk(bx-3, fy+1, 7, 1, C['py2']); blk(bx-3, fy+2, 7, 2, C['py3'])
-            blk(bx-3, fy+4, 7, 1, C['py2']); row(bx-1, fy+5, 3, C['py1'])
-            p(bx-3, fy+2, C['py4']); p(bx+3, fy+2, C['py4'])
-            blk(bx-1, fy+1, 3, 3, C['yc1'])
-            p(bx-1, fy+2, C['yc2']); p(bx+1, fy+2, C['yc2']); p(bx, fy+2, C['yc3'])
-            p(bx-1, fy+1, '#ffca28')
+        def flower_yellow(bx,fy):
+            row(bx-1,fy,3,C['py1'])
+            blk(bx-3,fy+1,7,1,C['py2']); blk(bx-3,fy+2,7,2,C['py3'])
+            blk(bx-3,fy+4,7,1,C['py2']); row(bx-1,fy+5,3,C['py1'])
+            p(bx-3,fy+2,C['py4']); p(bx+3,fy+2,C['py4'])
+            blk(bx-1,fy+1,3,3,C['yc1'])
+            p(bx-1,fy+2,C['yc2']); p(bx+1,fy+2,C['yc2']); p(bx,fy+2,C['yc3'])
+            p(bx-1,fy+1,'#ffca28')
 
-        def flower_orange(bx, fy):
-            row(bx-1, fy-1, 3, C['po1'])
-            blk(bx-4, fy, 9, 1, C['po2']); blk(bx-4, fy+1, 9, 5, C['po2'])
-            blk(bx-4, fy+6, 9, 1, C['po2']); row(bx-1, fy+7, 3, C['po1'])
-            blk(bx-4, fy+1, 2, 5, C['po3']); blk(bx+3, fy+1, 2, 5, C['po3'])
-            blk(bx-2, fy+1, 5, 5, C['oc1']); blk(bx-1, fy+2, 3, 3, C['oc2'])
-            p(bx, fy+3, C['oc3']); p(bx-2, fy+1, '#ff8f00'); p(bx-1, fy+1, '#ffa000')
+        def flower_orange(bx,fy):
+            row(bx-1,fy-1,3,C['po1'])
+            blk(bx-4,fy,9,1,C['po2']); blk(bx-4,fy+1,9,5,C['po2'])
+            blk(bx-4,fy+6,9,1,C['po2']); row(bx-1,fy+7,3,C['po1'])
+            blk(bx-4,fy+1,2,5,C['po3']); blk(bx+3,fy+1,2,5,C['po3'])
+            blk(bx-2,fy+1,5,5,C['oc1']); blk(bx-1,fy+2,3,3,C['oc2'])
+            p(bx,fy+3,C['oc3']); p(bx-2,fy+1,'#ff8f00'); p(bx-1,fy+1,'#ffa000')
 
-        def flower_red(bx, fy):
-            row(bx-2, fy-2, 5, C['pr1'])
-            p(bx-4, fy-1, C['pr1']); p(bx+4, fy-1, C['pr1'])
-            blk(bx-5, fy, 11, 1, C['pr2']); blk(bx-5, fy+1, 11, 6, C['pr2'])
-            blk(bx-5, fy+7, 11, 1, C['pr2'])
-            p(bx-4, fy+8, C['pr1']); p(bx+4, fy+8, C['pr1']); row(bx-2, fy+9, 5, C['pr1'])
-            blk(bx-5, fy+1, 2, 6, C['pr3']); blk(bx+4, fy+1, 2, 6, C['pr3'])
-            blk(bx-3, fy+1, 7, 6, C['rc1']); blk(bx-2, fy+2, 5, 4, C['rc2'])
-            blk(bx-1, fy+3, 3, 2, C['rc3'])
-            p(bx-1, fy+2, '#ffa000'); p(bx, fy+2, '#ffb300'); p(bx+1, fy+2, '#ffa000')
-            p(bx, fy+1, '#ff8f00')
+        def flower_red(bx,fy):
+            row(bx-2,fy-2,5,C['pr1']); p(bx-4,fy-1,C['pr1']); p(bx+4,fy-1,C['pr1'])
+            blk(bx-5,fy,11,1,C['pr2']); blk(bx-5,fy+1,11,6,C['pr2'])
+            blk(bx-5,fy+7,11,1,C['pr2'])
+            p(bx-4,fy+8,C['pr1']); p(bx+4,fy+8,C['pr1']); row(bx-2,fy+9,5,C['pr1'])
+            blk(bx-5,fy+1,2,6,C['pr3']); blk(bx+4,fy+1,2,6,C['pr3'])
+            blk(bx-3,fy+1,7,6,C['rc1']); blk(bx-2,fy+2,5,4,C['rc2'])
+            blk(bx-1,fy+3,3,2,C['rc3'])
+            p(bx-1,fy+2,'#ffa000'); p(bx,fy+2,'#ffb300'); p(bx+1,fy+2,'#ffa000')
+            p(bx,fy+1,'#ff8f00')
 
-        # flowers with sway
+        # flowers
         for i, week in enumerate(weeks):
             commits = week["commits"]
             if commits == 0: continue
-            sway = round(math.sin(sway_frame * sway_speeds[i] + sway_phases[i]) * 2)
+            sway = round(math.sin(sway_t * sway_speeds[i] + sway_phases[i]) * 2)
             bx = flower_positions[i] + sway
             max_stem = min(6 + int(commits * 2.5), 36)
             stemH = round(max_stem * grow_frac)
             stem_top = GY - stemH
             for s in range(stemH):
-                sw = round(sway * (s / max(stemH, 1)))
+                sw = round(sway * (s / max(stemH,1)))
                 p(bx+sw, stem_top+s, C['stem'])
                 p(bx+sw+1, stem_top+s, C['stem2'])
             if stemH > 10 and commits >= 3:
-                ly = GY - int(stemH * 0.42)
-                blk(bx-5, ly, 5, 1, C['leaf2']); blk(bx-6, ly+1, 5, 1, C['leaf'])
-                blk(bx-4, ly+2, 3, 1, C['leaf3'])
+                ly = GY - int(stemH*0.42)
+                blk(bx-5,ly,5,1,C['leaf2']); blk(bx-6,ly+1,5,1,C['leaf'])
+                blk(bx-4,ly+2,3,1,C['leaf3'])
             if stemH > 14 and commits >= 5:
-                ly2 = GY - int(stemH * 0.65)
-                blk(bx+2, ly2, 5, 1, C['leaf2']); blk(bx+3, ly2+1, 5, 1, C['leaf'])
-                blk(bx+2, ly2+2, 3, 1, C['leaf3'])
+                ly2 = GY - int(stemH*0.65)
+                blk(bx+2,ly2,5,1,C['leaf2']); blk(bx+3,ly2+1,5,1,C['leaf'])
+                blk(bx+2,ly2+2,3,1,C['leaf3'])
             if grow_frac < 0.65: continue
             head_y = stem_top - 3
-            if commits >= 9: flower_red(bx, head_y - 8)
-            elif commits >= 5: flower_orange(bx, head_y - 6)
-            else: flower_yellow(bx, head_y - 4)
+            if commits >= 9: flower_red(bx, head_y-8)
+            elif commits >= 5: flower_orange(bx, head_y-6)
+            else: flower_yellow(bx, head_y-4)
 
         # bottom bar
-        blk(0, ROWS-5, COLS, 5, '#000000')
+        blk(0, ROWS-6, COLS, 6, '#000000')
 
-        # render to PIL image
-        img = Image.new('RGB', (W, H), (17, 17, 17))
+        # render to PIL
+        img = Image.new('RGB', (W, H+30), (17,17,17))
         draw = ImageDraw.Draw(img)
 
         for r in range(ROWS):
@@ -204,75 +205,81 @@ def generate_gif(weeks):
                 color = buf[r][c]
                 if color is None:
                     color = C['sky'][-1] if r < GY else C['g1']
-                rgb = hex_to_rgb(color)
                 draw.rectangle(
                     [c*PX+1, r*PX+1, c*PX+PX-1, r*PX+PX-1],
-                    fill=rgb
+                    fill=hex_to_rgb(color)
                 )
 
-        # month labels
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 10)
-            font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 13)
-            font_legend = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 11)
+            font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 10)
+            font_lg = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 14)
+            font_leg = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 11)
         except:
-            font = ImageFont.load_default()
-            font_title = font
-            font_legend = font
+            font_sm = ImageFont.load_default()
+            font_lg = font_sm
+            font_leg = font_sm
 
+        # month labels
         for i, week in enumerate(weeks):
             if week["label"]:
                 x = flower_positions[i] * PX
-                draw.text((x, H - PX*4 + 2), week["label"], fill=(144, 202, 249), font=font)
+                draw.text((x, H-PX*4+2), week["label"], fill=(144,202,249), font=font_sm)
 
-        # title
+        # title — below the pixel area with padding
         title = "Raghav's Contribution Garden"
-        bbox = draw.textbbox((0,0), title, font=font_title)
-        tw = bbox[2] - bbox[0]
-        draw.text((W//2 - tw//2, H - 8), title, fill=(255, 224, 102), font=font_title)
+        bbox = draw.textbbox((0,0), title, font=font_lg)
+        tw = bbox[2]-bbox[0]
+        draw.text((W//2-tw//2, H+6), title, fill=(255,224,102), font=font_lg)
 
         # legend
-        draw.rectangle([6, 6, 238, 34], fill=(0,0,0,200))
-        draw.rectangle([6, 6, 238, 34], outline=(255,224,102), width=1)
-        draw.rectangle([18, 13, 30, 25], fill=hex_to_rgb('#fdd835'))
-        draw.text((34, 14), "1-4 commits", fill=(255,255,255), font=font_legend)
-        draw.rectangle([118, 13, 130, 25], fill=hex_to_rgb('#ffa000'))
-        draw.text((134, 14), "5-8", fill=(255,255,255), font=font_legend)
-        draw.rectangle([168, 13, 180, 25], fill=hex_to_rgb('#e65100'))
-        draw.text((184, 14), "9+", fill=(255,255,255), font=font_legend)
+        draw.rectangle([6,6,238,34], fill=(0,0,0))
+        draw.rectangle([6,6,238,34], outline=(255,224,102), width=1)
+        draw.rectangle([18,13,30,25], fill=hex_to_rgb('#fdd835'))
+        draw.text((34,14), "1-4 commits", fill=(255,255,255), font=font_leg)
+        draw.rectangle([118,13,130,25], fill=hex_to_rgb('#ffa000'))
+        draw.text((134,14), "5-8", fill=(255,255,255), font=font_leg)
+        draw.rectangle([168,13,180,25], fill=hex_to_rgb('#e65100'))
+        draw.text((184,14), "9+", fill=(255,255,255), font=font_leg)
 
         return img
 
-    # Generate frames
     print("Generating GIF frames...")
     frames = []
-    TOTAL_FRAMES = 60  # 2 seconds at ~30fps equivalent (using 80ms per frame = ~12fps)
+    durations = []
 
-    cloud_positions = [{'x': float(cl['x']), 'y': cl['y'], 'speed': cl['speed'], 'w': cl['w']} for cl in cloud_configs]
+    cloud_positions = [{'x': float(cl['x']), 'y': cl['y'],
+                        'speed': cl['speed'], 'w': cl['w']} for cl in cloud_configs]
 
-    for f in range(TOTAL_FRAMES):
-        grow_frac = min(f / 20, 1.0)  # grow in first 20 frames
-        sway_frame = f * 3
-
-        # move clouds
-        for ci, cl in enumerate(cloud_positions):
+    # --- Phase 1: grow frames (flowers grow, clouds move, no sway yet)
+    for f in range(GROW_FRAMES):
+        grow_frac = (f+1) / GROW_FRAMES  # 0→1 over grow frames
+        for cl in cloud_positions:
             cl['x'] += cl['speed']
-            if cl['x'] > COLS + cl['w']:
-                cl['x'] = -cl['w']
-
-        img = make_frame(f, cloud_positions, grow_frac, sway_frame)
+            if cl['x'] > COLS + cl['w']: cl['x'] = -cl['w']
+        img = make_frame(f, cloud_positions, grow_frac, 0)
         frames.append(img)
-        if f % 10 == 0:
-            print(f"  Frame {f}/{TOTAL_FRAMES}")
+        durations.append(40)  # 40ms per grow frame = fast grow
+        if f % 10 == 0: print(f"  Grow frame {f}/{GROW_FRAMES}")
 
-    # Save as GIF
+    # --- Phase 2: loop frames (fully grown, clouds + sway)
+    for f in range(LOOP_FRAMES):
+        sway_t = f * 3
+        for cl in cloud_positions:
+            cl['x'] += cl['speed']
+            if cl['x'] > COLS + cl['w']: cl['x'] = -cl['w']
+        img = make_frame(GROW_FRAMES+f, cloud_positions, 1.0, sway_t)
+        frames.append(img)
+        durations.append(80)  # 80ms per loop frame
+        if f % 10 == 0: print(f"  Loop frame {f}/{LOOP_FRAMES}")
+
     os.makedirs("dist", exist_ok=True)
+    # Save: only loop frames repeat — grow plays once then loops the animation
     frames[0].save(
         "dist/garden.gif",
         save_all=True,
         append_images=frames[1:],
         optimize=False,
-        duration=80,  # 80ms per frame = ~12fps
+        duration=durations,
         loop=0
     )
     print("Done! dist/garden.gif generated.")
