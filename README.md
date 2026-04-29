@@ -51,22 +51,22 @@
 ---
 
 <div align="center">
-  <a href="https://www.linkedin.com/in/joshi-raghav/" target="_blank">
-    <img src="https://img.shields.io/static/v1?message=LinkedIn&logo=linkedin&label=&color=0077B5&logoColor=white&style=for-the-badge" height="25" alt="linkedin" />
-  </a>
-  <a href="mailto:Raghav.joshi@rtu.lv" target="_blank">
-    <img src="https://img.shields.io/static/v1?message=Outlook&logo=microsoft-outlook&label=&color=0078D4&logoColor=white&style=for-the-badge" height="25" alt="outlook" />
-  </a>
-</div>
-
----
-
-<div align="center">
   <a href="https://raghav-joshi21.github.io/Raghav-joshi21/garden.html" target="_blank">
     <img alt="Raghav's Contribution Garden" src="https://raw.githubusercontent.com/Raghav-joshi21/Raghav-joshi21/output/garden.gif" width="100%"/>
   </a>
   <br/>
   <sub>🌼 1–4 commits &nbsp;|&nbsp; 🌸 5–8 commits &nbsp;|&nbsp; 🌺 9+ commits &nbsp;|&nbsp; <a href="https://raghav-joshi21.github.io/Raghav-joshi21/garden.html">open interactive ↗</a></sub>
+</div>
+
+---
+
+<div align="center">
+  <a href="https://www.linkedin.com/in/joshi-raghav/" target="_blank">
+    <img src="https://img.shields.io/static/v1?message=LinkedIn&logo=linkedin&label=&color=0077B5&logoColor=white&style=for-the-badge" height="25" alt="linkedin" />
+  </a>
+  <a href="mailto:Raghav.joshi@rtu.lv" target="_blank">
+    <img src="https://img.shields.io/static/v1?message=Raghav.joshi%40rtu.lv&logo=microsoft-outlook&label=&color=0078D4&logoColor=white&style=for-the-badge" height="25" alt="outlook" />
+  </a>
 </div>
 
 ---
