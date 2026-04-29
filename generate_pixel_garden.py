@@ -37,6 +37,10 @@ def get_contributions():
         date = week["contributionDays"][0]["date"]
         month = datetime.strptime(date, "%Y-%m-%d").strftime("%b")
         result.append({"commits": total, "date": date, "month": month})
+
+    # Keep only last 26 weeks (~6 months)
+    result = result[-26:]
+
     seen = set()
     for w in result:
         if w["month"] not in seen:
@@ -75,8 +79,10 @@ def generate_gif(weeks):
         'rc1': '#bf360c', 'rc2': '#8d2c02', 'rc3': '#5d1f00',
     }
 
-    spacing = math.floor((COLS - 8) / len(weeks))
-    flower_positions = [4 + i * spacing for i in range(len(weeks))]
+    # Wider spacing since we have fewer weeks
+    n = len(weeks)
+    spacing = math.floor((COLS - 8) / n)
+    flower_positions = [4 + i * spacing + spacing // 2 for i in range(n)]
 
     cloud_configs = [
         {'x': 10.0, 'y': 7,  'speed': 0.4,  'w': 13},
@@ -85,17 +91,13 @@ def generate_gif(weeks):
         {'x': 85.0, 'y': 12, 'speed': 0.2,  'w': 11},
     ]
 
-    sway_phases = [i * 0.7 for i in range(len(weeks))]
-    sway_speeds = [0.015 + (i % 7) * 0.003 for i in range(len(weeks))]
+    sway_phases = [i * 0.7 for i in range(n)]
+    sway_speeds = [0.015 + (i % 7) * 0.003 for i in range(n)]
 
-    # --- TOTAL_FRAMES split:
-    # frames 0-29:  grow animation (1 second at 30ms/frame)
-    # frames 30-99: cloud + sway loop (70 frames = ~2.1s, loops forever)
     GROW_FRAMES = 30
     LOOP_FRAMES = 70
-    TOTAL_FRAMES = GROW_FRAMES + LOOP_FRAMES
 
-    def make_frame(frame_num, cloud_positions, grow_frac, sway_t):
+    def make_frame(cloud_positions, grow_frac, sway_t):
         buf = [[None]*COLS for _ in range(ROWS)]
 
         def p(x, y, c):
@@ -122,7 +124,7 @@ def generate_gif(weeks):
 
         # clouds
         def draw_cloud(cx, cy):
-            x,y = int(cx),int(cy)
+            x, y = int(cx), int(cy)
             blk(x+3,y,6,2,C['cloudsh']); blk(x+1,y+1,10,2,C['cloudsh'])
             blk(x,y+2,13,3,C['cloud']); blk(x+2,y+1,9,4,C['cloud'])
             blk(x+4,y,6,5,C['cloud'])
@@ -138,7 +140,7 @@ def generate_gif(weeks):
             p(x,GY-2,C['g4'])
             if x+2<COLS: p(x+2,GY-3,C['g3'])
 
-        def flower_yellow(bx,fy):
+        def flower_yellow(bx, fy):
             row(bx-1,fy,3,C['py1'])
             blk(bx-3,fy+1,7,1,C['py2']); blk(bx-3,fy+2,7,2,C['py3'])
             blk(bx-3,fy+4,7,1,C['py2']); row(bx-1,fy+5,3,C['py1'])
@@ -147,7 +149,7 @@ def generate_gif(weeks):
             p(bx-1,fy+2,C['yc2']); p(bx+1,fy+2,C['yc2']); p(bx,fy+2,C['yc3'])
             p(bx-1,fy+1,'#ffca28')
 
-        def flower_orange(bx,fy):
+        def flower_orange(bx, fy):
             row(bx-1,fy-1,3,C['po1'])
             blk(bx-4,fy,9,1,C['po2']); blk(bx-4,fy+1,9,5,C['po2'])
             blk(bx-4,fy+6,9,1,C['po2']); row(bx-1,fy+7,3,C['po1'])
@@ -155,7 +157,7 @@ def generate_gif(weeks):
             blk(bx-2,fy+1,5,5,C['oc1']); blk(bx-1,fy+2,3,3,C['oc2'])
             p(bx,fy+3,C['oc3']); p(bx-2,fy+1,'#ff8f00'); p(bx-1,fy+1,'#ffa000')
 
-        def flower_red(bx,fy):
+        def flower_red(bx, fy):
             row(bx-2,fy-2,5,C['pr1']); p(bx-4,fy-1,C['pr1']); p(bx+4,fy-1,C['pr1'])
             blk(bx-5,fy,11,1,C['pr2']); blk(bx-5,fy+1,11,6,C['pr2'])
             blk(bx-5,fy+7,11,1,C['pr2'])
@@ -166,7 +168,6 @@ def generate_gif(weeks):
             p(bx-1,fy+2,'#ffa000'); p(bx,fy+2,'#ffb300'); p(bx+1,fy+2,'#ffa000')
             p(bx,fy+1,'#ff8f00')
 
-        # flowers
         for i, week in enumerate(weeks):
             commits = week["commits"]
             if commits == 0: continue
@@ -176,7 +177,7 @@ def generate_gif(weeks):
             stemH = round(max_stem * grow_frac)
             stem_top = GY - stemH
             for s in range(stemH):
-                sw = round(sway * (s / max(stemH,1)))
+                sw = round(sway * (s / max(stemH, 1)))
                 p(bx+sw, stem_top+s, C['stem'])
                 p(bx+sw+1, stem_top+s, C['stem2'])
             if stemH > 10 and commits >= 3:
@@ -196,8 +197,8 @@ def generate_gif(weeks):
         # bottom bar
         blk(0, ROWS-6, COLS, 6, '#000000')
 
-        # render to PIL
-        img = Image.new('RGB', (W, H+30), (17,17,17))
+        # render to PIL — extra 28px at bottom for title
+        img = Image.new('RGB', (W, H+28), (17,17,17))
         draw = ImageDraw.Draw(img)
 
         for r in range(ROWS):
@@ -211,27 +212,27 @@ def generate_gif(weeks):
                 )
 
         try:
-            font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 10)
-            font_lg = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 14)
+            font_sm  = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 10)
+            font_lg  = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 14)
             font_leg = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 11)
         except:
-            font_sm = ImageFont.load_default()
-            font_lg = font_sm
+            font_sm  = ImageFont.load_default()
+            font_lg  = font_sm
             font_leg = font_sm
 
-        # month labels
+        # month labels — centered under each week group
         for i, week in enumerate(weeks):
             if week["label"]:
                 x = flower_positions[i] * PX
                 draw.text((x, H-PX*4+2), week["label"], fill=(144,202,249), font=font_sm)
 
-        # title — below the pixel area with padding
+        # title centered below pixel area
         title = "Raghav's Contribution Garden"
         bbox = draw.textbbox((0,0), title, font=font_lg)
-        tw = bbox[2]-bbox[0]
-        draw.text((W//2-tw//2, H+6), title, fill=(255,224,102), font=font_lg)
+        tw = bbox[2] - bbox[0]
+        draw.text((W//2 - tw//2, H+6), title, fill=(255,224,102), font=font_lg)
 
-        # legend
+        # legend top left
         draw.rectangle([6,6,238,34], fill=(0,0,0))
         draw.rectangle([6,6,238,34], outline=(255,224,102), width=1)
         draw.rectangle([18,13,30,25], fill=hex_to_rgb('#fdd835'))
@@ -250,30 +251,27 @@ def generate_gif(weeks):
     cloud_positions = [{'x': float(cl['x']), 'y': cl['y'],
                         'speed': cl['speed'], 'w': cl['w']} for cl in cloud_configs]
 
-    # --- Phase 1: grow frames (flowers grow, clouds move, no sway yet)
+    # Phase 1: grow (play once)
     for f in range(GROW_FRAMES):
-        grow_frac = (f+1) / GROW_FRAMES  # 0→1 over grow frames
+        grow_frac = (f+1) / GROW_FRAMES
         for cl in cloud_positions:
             cl['x'] += cl['speed']
             if cl['x'] > COLS + cl['w']: cl['x'] = -cl['w']
-        img = make_frame(f, cloud_positions, grow_frac, 0)
-        frames.append(img)
-        durations.append(40)  # 40ms per grow frame = fast grow
-        if f % 10 == 0: print(f"  Grow frame {f}/{GROW_FRAMES}")
+        frames.append(make_frame(cloud_positions, grow_frac, 0))
+        durations.append(40)
+        if f % 10 == 0: print(f"  Grow {f}/{GROW_FRAMES}")
 
-    # --- Phase 2: loop frames (fully grown, clouds + sway)
+    # Phase 2: loop (clouds + sway, flowers fully grown)
     for f in range(LOOP_FRAMES):
         sway_t = f * 3
         for cl in cloud_positions:
             cl['x'] += cl['speed']
             if cl['x'] > COLS + cl['w']: cl['x'] = -cl['w']
-        img = make_frame(GROW_FRAMES+f, cloud_positions, 1.0, sway_t)
-        frames.append(img)
-        durations.append(80)  # 80ms per loop frame
-        if f % 10 == 0: print(f"  Loop frame {f}/{LOOP_FRAMES}")
+        frames.append(make_frame(cloud_positions, 1.0, sway_t))
+        durations.append(80)
+        if f % 10 == 0: print(f"  Loop {f}/{LOOP_FRAMES}")
 
     os.makedirs("dist", exist_ok=True)
-    # Save: only loop frames repeat — grow plays once then loops the animation
     frames[0].save(
         "dist/garden.gif",
         save_all=True,
@@ -287,5 +285,5 @@ def generate_gif(weeks):
 if __name__ == "__main__":
     print("Fetching contributions...")
     weeks = get_contributions()
-    print(f"Got {len(weeks)} weeks")
+    print(f"Got {len(weeks)} weeks (last 6 months)")
     generate_gif(weeks)
