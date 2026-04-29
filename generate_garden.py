@@ -1,8 +1,6 @@
 import requests
-import json
 import os
-from datetime import datetime, timedelta
-import math
+from datetime import datetime
 
 TOKEN = os.environ.get("GITHUB_TOKEN")
 USERNAME = os.environ.get("GITHUB_USERNAME", "Raghav-joshi21")
@@ -25,184 +23,218 @@ def get_contributions():
     }
     """
     headers = {"Authorization": f"Bearer {TOKEN}"}
-    response = requests.post(
+    r = requests.post(
         "https://api.github.com/graphql",
         json={"query": query, "variables": {"username": USERNAME}},
         headers=headers
     )
-    data = response.json()
+    data = r.json()
     weeks = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
-    
     result = []
     for week in weeks:
         total = sum(d["contributionCount"] for d in week["contributionDays"])
         date = week["contributionDays"][0]["date"]
-        result.append({"commits": total, "date": date})
+        month = datetime.strptime(date, "%Y-%m-%d").strftime("%b")
+        result.append({"commits": total, "date": date, "month": month})
+    # label only first occurrence of each month
+    seen = set()
+    for w in result:
+        if w["month"] not in seen:
+            seen.add(w["month"])
+            w["label"] = w["month"]
+        else:
+            w["label"] = ""
     return result
 
-def get_petal_color(commits):
-    if commits >= 9:
-        return "#ff6600"
-    elif commits >= 5:
-        return "#f0a800"
-    else:
-        return "#f5d020"
-
-def get_center_color(commits):
-    if commits >= 9:
-        return "#cc2200"
-    elif commits >= 5:
-        return "#e05500"
-    else:
-        return "#e8820a"
-
-def get_petal_count(commits):
-    if commits >= 8:
-        return 8
-    elif commits >= 4:
-        return 6
-    else:
-        return 4
-
 def generate_svg(weeks):
-    W, H, groundY = 680, 320, 260
-    plants = []
+    PX = 7
+    COLS = 148
+    ROWS = 78
+    GY = 62
+    W = COLS * PX
+    H = ROWS * PX
 
-    total_weeks = len(weeks)
+    # pixel buffer
+    buf = [[None]*COLS for _ in range(ROWS)]
+
+    def px(x, y, c):
+        if 0 <= x < COLS and 0 <= y < ROWS:
+            buf[y][x] = c
+
+    def row(x, y, w, c):
+        for i in range(w): px(x+i, y, c)
+
+    def blk(x, y, w, h, c):
+        for r in range(h): row(x, y+r, w, c)
+
+    C = {
+        'sky1':'#0d47a1','sky2':'#1565c0','sky3':'#1e88e5','sky4':'#42a5f5','sky5':'#90caf9',
+        'sun':'#ffe066','sunhi':'#fffde7',
+        'cloud':'#ffffff','cloudsh':'#e3f2fd',
+        'g1':'#1b5e20','g2':'#2e7d32','g3':'#43a047','g4':'#66bb6a',
+        'stem':'#33691e','stem2':'#558b2f',
+        'leaf':'#388e3c','leaf2':'#2e7d32','leaf3':'#1b5e20',
+        'py1':'#fff176','py2':'#ffee58','py3':'#fdd835','py4':'#f9a825',
+        'yc1':'#6d4c41','yc2':'#4e342e','yc3':'#3e2723',
+        'po1':'#ffcc02','po2':'#ffa000','po3':'#e65100','po4':'#bf360c',
+        'oc1':'#4e342e','oc2':'#3e2723','oc3':'#1a0000',
+        'pr1':'#ff8f00','pr2':'#e65100','pr3':'#bf360c','pr4':'#7f0000',
+        'rc1':'#3e2723','rc2':'#1a0000','rc3':'#0d0000',
+    }
+
+    def draw_sky():
+        skys = [C['sky1'],C['sky2'],C['sky3'],C['sky4'],C['sky5']]
+        for r in range(GY):
+            t = r / GY
+            si = min(int(t * len(skys)), len(skys)-1)
+            row(0, r, COLS, skys[si])
+
+    def draw_sun(sx, sy):
+        row(sx+1, sy-3, 5, C['sun'])
+        row(sx+1, sy+7, 5, C['sun'])
+        blk(sx-2, sy-1, 2, 7, C['sun'])
+        blk(sx+7, sy-1, 2, 7, C['sun'])
+        blk(sx, sy-2, 7, 9, C['sun'])
+        blk(sx-1, sy-1, 9, 7, C['sun'])
+        blk(sx+1, sy-1, 3, 3, C['sunhi'])
+
+    def draw_cloud(cx, cy):
+        blk(cx+3, cy, 6, 2, C['cloudsh'])
+        blk(cx+1, cy+1, 10, 2, C['cloudsh'])
+        blk(cx, cy+2, 13, 3, C['cloud'])
+        blk(cx+2, cy+1, 9, 4, C['cloud'])
+        blk(cx+4, cy, 6, 5, C['cloud'])
+
+    def draw_ground():
+        blk(0, GY, COLS, ROWS-GY, C['g1'])
+        row(0, GY, COLS, C['g3'])
+        row(0, GY+1, COLS, C['g2'])
+        for x in range(0, COLS, 3): px(x, GY-1, C['g3'])
+        for x in range(1, COLS, 5):
+            px(x, GY-2, C['g4'])
+            px(x+2, GY-3, C['g3'])
+
+    def flower_yellow(bx, fy):
+        row(bx-1, fy, 3, C['py1'])
+        blk(bx-3, fy+1, 7, 1, C['py2'])
+        blk(bx-3, fy+2, 7, 2, C['py3'])
+        blk(bx-3, fy+4, 7, 1, C['py2'])
+        row(bx-1, fy+5, 3, C['py1'])
+        px(bx-3, fy+2, C['py4']); px(bx+3, fy+2, C['py4'])
+        px(bx-2, fy+1, C['py2']); px(bx+2, fy+1, C['py2'])
+        px(bx-2, fy+4, C['py2']); px(bx+2, fy+4, C['py2'])
+        blk(bx-1, fy+1, 3, 3, C['yc1'])
+        blk(bx-1, fy+2, 3, 1, C['yc2'])
+        px(bx, fy+2, C['yc3'])
+        px(bx-1, fy+1, C['yc2']); px(bx+1, fy+1, C['yc2'])
+
+    def flower_orange(bx, fy):
+        row(bx-1, fy-1, 3, C['po1'])
+        blk(bx-4, fy, 9, 1, C['po2'])
+        blk(bx-4, fy+1, 9, 5, C['po2'])
+        blk(bx-4, fy+6, 9, 1, C['po2'])
+        row(bx-1, fy+7, 3, C['po1'])
+        blk(bx-4, fy+1, 2, 5, C['po3'])
+        blk(bx+3, fy+1, 2, 5, C['po3'])
+        blk(bx-2, fy+1, 5, 5, C['oc1'])
+        blk(bx-1, fy+2, 3, 3, C['oc2'])
+        px(bx, fy+3, C['oc3'])
+
+    def flower_red(bx, fy):
+        row(bx-2, fy-2, 5, C['pr1'])
+        px(bx-4, fy-1, C['pr1']); px(bx+4, fy-1, C['pr1'])
+        blk(bx-5, fy, 11, 1, C['pr2'])
+        blk(bx-5, fy+1, 11, 6, C['pr2'])
+        blk(bx-5, fy+7, 11, 1, C['pr2'])
+        px(bx-4, fy+8, C['pr1']); px(bx+4, fy+8, C['pr1'])
+        row(bx-2, fy+9, 5, C['pr1'])
+        blk(bx-5, fy+1, 2, 6, C['pr3'])
+        blk(bx+4, fy+1, 2, 6, C['pr3'])
+        blk(bx-3, fy+1, 7, 6, C['rc1'])
+        blk(bx-2, fy+2, 5, 4, C['rc2'])
+        blk(bx-1, fy+3, 3, 2, C['rc3'])
+        px(bx-2, fy+2, C['rc1']); px(bx+2, fy+2, C['rc1'])
+        px(bx-2, fy+5, C['rc1']); px(bx+2, fy+5, C['rc1'])
+
+    def draw_flower(bx, commits):
+        if commits == 0: return
+        max_stem = min(6 + int(commits * 2.8), 40)
+        stem_top = GY - max_stem
+        for s in range(max_stem):
+            px(bx, stem_top+s, C['stem'])
+            px(bx+1, stem_top+s, C['stem2'])
+        if max_stem > 10 and commits >= 3:
+            ly = GY - int(max_stem * 0.42)
+            blk(bx-5, ly, 5, 1, C['leaf2'])
+            blk(bx-6, ly+1, 5, 1, C['leaf'])
+            blk(bx-4, ly+2, 3, 1, C['leaf3'])
+        if max_stem > 16 and commits >= 5:
+            ly2 = GY - int(max_stem * 0.65)
+            blk(bx+2, ly2, 5, 1, C['leaf2'])
+            blk(bx+3, ly2+1, 5, 1, C['leaf'])
+            blk(bx+2, ly2+2, 3, 1, C['leaf3'])
+        head_y = stem_top - 3
+        if commits >= 9: flower_red(bx, head_y - 8)
+        elif commits >= 5: flower_orange(bx, head_y - 6)
+        else: flower_yellow(bx, head_y - 4)
+
+    # Draw everything
+    draw_sky()
+    draw_sun(130, 6)
+    draw_cloud(4, 8); draw_cloud(44, 5); draw_cloud(90, 9)
+    draw_ground()
+
     for i, week in enumerate(weeks):
-        commits = week["commits"]
-        if commits == 0:
-            continue
-        x = 30 + i * (620 / max(total_weeks - 1, 1))
-        max_h = min(20 + commits * 17, 200)
-        phase = (i * 2.3) % (2 * math.pi)
-        sway_amt = 4 if commits > 6 else 2
-        plants.append({
-            "x": x, "commits": commits, "maxH": max_h,
-            "phase": phase, "swayAmt": sway_amt,
-            "date": week["date"]
-        })
+        x = round(4 + i * (COLS - 8) / len(weeks))
+        draw_flower(x, week["commits"])
 
-    month_labels = []
-    seen_months = set()
+    # Build SVG rects
+    rects = []
+    for r in range(ROWS):
+        for c in range(COLS):
+            color = buf[r][c] or (C['sky5'] if r < GY else C['g1'])
+            rx = c * PX + 1
+            ry = r * PX + 1
+            rects.append(f'<rect x="{rx}" y="{ry}" width="{PX-1}" height="{PX-1}" fill="{color}"/>')
+
+    # Month labels
+    month_texts = []
     for i, week in enumerate(weeks):
-        month = week["date"][:7]
-        if month not in seen_months:
-            seen_months.add(month)
-            x = 30 + i * (620 / max(len(weeks) - 1, 1))
-            label = datetime.strptime(week["date"], "%Y-%m-%d").strftime("%b")
-            month_labels.append((x, label))
+        if week["label"]:
+            x = (4 + i * (COLS - 8) / len(weeks)) * PX
+            month_texts.append(f'<text x="{x:.1f}" y="{H - PX*3}" font-family="monospace" font-size="{PX+1}" font-weight="bold" fill="#90caf9">{week["label"]}</text>')
 
-    svg_parts = [f'''<svg width="680" height="320" viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
-<defs>
-  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#1a6fbf"/>
-    <stop offset="60%" stop-color="#4da6e8"/>
-    <stop offset="100%" stop-color="#a8d8f0"/>
-  </linearGradient>
-  <radialGradient id="sun" cx="50%" cy="50%" r="50%">
-    <stop offset="0%" stop-color="rgba(255,240,100,1)"/>
-    <stop offset="50%" stop-color="rgba(255,210,50,0.8)"/>
-    <stop offset="100%" stop-color="rgba(255,180,0,0)"/>
-  </radialGradient>
-  <style>
-    .stem {{ stroke: #3b7022; stroke-linecap: round; fill: none; }}
-    .leaf {{ fill: #4a8c28; }}
-    .ground {{ fill: #2d5a1b; }}
-    .ground-top {{ fill: #3b7022; }}
-    .cloud {{ fill: rgba(255,255,255,0.82); }}
-    .month {{ font-family: sans-serif; font-size: 11px; fill: #1a4a0a; text-anchor: middle; }}
-    @keyframes sway {{
-      0%,100% {{ transform: rotate(0deg); }}
-      50% {{ transform: rotate(2deg); }}
-    }}
-    @keyframes grow {{
-      from {{ transform: scaleY(0); transform-origin: bottom; }}
-      to {{ transform: scaleY(1); transform-origin: bottom; }}
-    }}
-    .plant {{ animation: grow 1.5s ease-out forwards; transform-origin: bottom; }}
-    .petal {{ animation: sway 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }}
-  </style>
-</defs>
+    # Title
+    title_text = f'<text x="{W//2}" y="{H - PX + 2}" font-family="monospace" font-size="{PX*2}" font-weight="bold" fill="#ffe066" text-anchor="middle">Raghav\'s Contribution Garden</text>'
 
-<rect width="680" height="{groundY}" fill="url(#sky)"/>
-<circle cx="600" cy="55" r="40" fill="url(#sun)"/>
+    # Legend
+    legend = f'''
+<rect x="{PX}" y="{PX}" width="{PX*22}" height="{PX*3}" fill="rgba(0,0,0,0.7)"/>
+<rect x="{PX+2}" y="{PX+4}" width="{PX-1}" height="{PX-1}" fill="#fdd835"/>
+<text x="{PX*3+2}" y="{PX*2+3}" font-family="monospace" font-size="{PX}" font-weight="bold" fill="white">1-4 commits</text>
+<rect x="{PX*2+76}" y="{PX+4}" width="{PX-1}" height="{PX-1}" fill="#ffa000"/>
+<text x="{PX*2+78+PX}" y="{PX*2+3}" font-family="monospace" font-size="{PX}" font-weight="bold" fill="white">5-8</text>
+<rect x="{PX*2+152}" y="{PX+4}" width="{PX-1}" height="{PX-1}" fill="#e65100"/>
+<text x="{PX*2+154+PX}" y="{PX*2+3}" font-family="monospace" font-size="{PX}" font-weight="bold" fill="white">9+</text>
+'''
 
-<ellipse cx="80" cy="55" rx="45" ry="18" class="cloud"/>
-<ellipse cx="52" cy="61" rx="26" ry="13" class="cloud"/>
-<ellipse cx="110" cy="60" rx="30" ry="14" class="cloud"/>
+    svg = f'''<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">
+<rect width="{W}" height="{H}" fill="#111111"/>
+{''.join(rects)}
+<rect x="0" y="{H - PX*5}" width="{W}" height="{PX*5}" fill="rgba(0,0,0,0.72)"/>
+{''.join(month_texts)}
+{title_text}
+{legend}
+</svg>'''
 
-<ellipse cx="300" cy="40" rx="60" ry="18" class="cloud"/>
-<ellipse cx="270" cy="46" rx="35" ry="13" class="cloud"/>
-<ellipse cx="340" cy="45" rx="38" ry="14" class="cloud"/>
-
-<ellipse cx="490" cy="65" rx="40" ry="16" class="cloud"/>
-<ellipse cx="465" cy="70" rx="25" ry="12" class="cloud"/>
-<ellipse cx="518" cy="69" rx="28" ry="13" class="cloud"/>
-
-<rect y="{groundY}" width="680" height="{H - groundY}" class="ground"/>
-<rect y="{groundY}" width="680" height="10" class="ground-top"/>
-''']
-
-    for p in plants:
-        x = p["x"]
-        commits = p["commits"]
-        max_h = p["maxH"]
-        tip_x = x
-        tip_y = groundY - max_h
-        stem_w = 3 if commits > 6 else 2
-        delay = (x / 680) * 1.2
-
-        svg_parts.append(f'''
-<g class="plant" style="animation-delay: {delay:.2f}s">
-  <path class="stem" stroke-width="{stem_w}"
-    d="M{x:.1f},{groundY} Q{x:.1f},{groundY - max_h*0.5:.1f} {tip_x:.1f},{tip_y:.1f}"/>
-''')
-        if commits >= 2:
-            lx, ly = x - 8, groundY - max_h * 0.45
-            svg_parts.append(f'  <ellipse class="leaf" cx="{lx:.1f}" cy="{ly:.1f}" rx="10" ry="4" transform="rotate(-30 {lx:.1f} {ly:.1f})"/>\n')
-        if commits >= 5:
-            lx2, ly2 = x + 8, groundY - max_h * 0.65
-            svg_parts.append(f'  <ellipse class="leaf" cx="{lx2:.1f}" cy="{ly2:.1f}" rx="10" ry="4" transform="rotate(30 {lx2:.1f} {ly2:.1f})"/>\n')
-
-        r = 9 if commits >= 9 else (7 if commits >= 5 else 5)
-        petal_color = get_petal_color(commits)
-        center_color = get_center_color(commits)
-        petal_count = get_petal_count(commits)
-        petal_delay = delay + 0.8
-
-        for pi in range(petal_count):
-            angle = (pi / petal_count) * 2 * math.pi
-            px = tip_x + math.cos(angle) * (r + 4)
-            py = tip_y + math.sin(angle) * (r + 4)
-            rot = math.degrees(angle)
-            sway_delay = petal_delay + pi * 0.1
-            svg_parts.append(f'  <ellipse class="petal" cx="{px:.1f}" cy="{py:.1f}" rx="{r*0.8:.1f}" ry="{r*0.45:.1f}" fill="{petal_color}" transform="rotate({rot:.1f} {px:.1f} {py:.1f})" style="animation-delay:{sway_delay:.2f}s"/>\n')
-
-        svg_parts.append(f'  <circle cx="{tip_x:.1f}" cy="{tip_y:.1f}" r="{r}" fill="{center_color}"/>\n')
-        svg_parts.append('</g>\n')
-
-    for mx, label in month_labels:
-        svg_parts.append(f'<text x="{mx:.1f}" y="{H - 5}" class="month">{label}</text>\n')
-
-    svg_parts.append(f'''
-<rect x="12" y="10" width="220" height="22" rx="5" fill="rgba(0,0,0,0.25)"/>
-<circle cx="26" cy="21" r="5" fill="#f5d020"/>
-<text x="36" y="25" font-family="sans-serif" font-size="10" fill="#fff">1–4</text>
-<circle cx="80" cy="21" r="5" fill="#f0a800"/>
-<text x="90" y="25" font-family="sans-serif" font-size="10" fill="#fff">5–8</text>
-<circle cx="134" cy="21" r="5" fill="#cc2200"/>
-<text x="144" y="25" font-family="sans-serif" font-size="10" fill="#fff">9+ commits</text>
-</svg>''')
-
-    return "".join(svg_parts)
+    return svg
 
 if __name__ == "__main__":
     print("Fetching contributions...")
     weeks = get_contributions()
-    print(f"Got {len(weeks)} weeks of data")
+    print(f"Got {len(weeks)} weeks")
     svg = generate_svg(weeks)
     os.makedirs("dist", exist_ok=True)
     with open("dist/garden.svg", "w") as f:
         f.write(svg)
-    print("garden.svg generated successfully!")
+    print("Done! dist/garden.svg generated.")
