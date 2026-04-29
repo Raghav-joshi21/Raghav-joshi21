@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Raghav's Contribution Garden</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d1117;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+canvas{display:block;cursor:crosshair;}
+#tooltip{position:fixed;display:none;background:rgba(0,0,0,0.85);border:1px solid #ffe066;color:#fff;font:bold 11px monospace;padding:6px 10px;border-radius:4px;pointer-events:none;white-space:nowrap;z-index:99;}
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+<canvas id="c"></canvas>
+<script>
+const PX=6, COLS=170, ROWS=82, GY=64;
+const W=COLS*PX, H=ROWS*PX;
+const canvas=document.getElementById('c');
+canvas.width=W; canvas.height=H;
+const ctx=canvas.getContext('2d');
+const tip=document.getElementById('tooltip');
+
+const C={
+  sky1:'#0d47a1',sky2:'#1565c0',sky3:'#1e88e5',sky4:'#42a5f5',sky5:'#90caf9',
+  sun:'#ffe066',sunhi:'#fffde7',
+  cloud:'#ffffff',cloudsh:'#e3f2fd',
+  g1:'#1b5e20',g2:'#2e7d32',g3:'#43a047',g4:'#66bb6a',
+  stem:'#33691e',stem2:'#558b2f',
+  leaf:'#388e3c',leaf2:'#2e7d32',leaf3:'#1b5e20',
+  py1:'#fff176',py2:'#ffee58',py3:'#fdd835',py4:'#f9a825',
+  yc1:'#ff8f00',yc2:'#e65100',yc3:'#bf360c',
+  po1:'#ffcc02',po2:'#ffa000',po3:'#e65100',
+  oc1:'#bf360c',oc2:'#8d2c02',oc3:'#6d1f00',
+  pr1:'#ff8f00',pr2:'#e65100',pr3:'#bf360c',
+  rc1:'#bf360c',rc2:'#8d2c02',rc3:'#5d1f00',
+};
+
+const clouds=[
+  {x:10,  y:7,  speed:0.04, w:13},
+  {x:60,  y:4,  speed:0.025,w:16},
+  {x:120, y:8,  speed:0.035,w:13},
+  {x:85,  y:12, speed:0.02, w:11},
+];
+
+const weeks=[
+  {m:'Apr',c:1},{m:'May',c:2},{m:'',c:0},{m:'',c:1},{m:'',c:3},
+  {m:'Jun',c:5},{m:'',c:8},{m:'',c:4},{m:'',c:6},
+  {m:'Jul',c:2},{m:'',c:1},{m:'',c:3},{m:'',c:2},
+  {m:'Aug',c:4},{m:'',c:3},{m:'',c:5},{m:'',c:3},
+  {m:'Sep',c:2},{m:'',c:1},{m:'',c:2},{m:'',c:1},
+  {m:'Oct',c:3},{m:'',c:4},{m:'',c:2},{m:'',c:3},
+  {m:'Nov',c:1},{m:'',c:0},{m:'',c:2},{m:'',c:1},
+  {m:'Dec',c:6},{m:'',c:8},{m:'',c:5},{m:'',c:7},
+  {m:'Jan',c:10},{m:'',c:12},{m:'',c:9},{m:'',c:11},
+  {m:'Feb',c:8},{m:'',c:7},{m:'',c:9},{m:'',c:6},
+  {m:'Mar',c:12},{m:'',c:11},{m:'',c:10},{m:'',c:9},
+  {m:'Apr',c:7},{m:'',c:5},{m:'',c:4},{m:'',c:3},
+];
+
+const spacing=Math.floor((COLS-8)/weeks.length);
+const flowerData=weeks.map((w,i)=>({
+  ...w, x:4+i*spacing,
+  swayPhase:Math.random()*Math.PI*2,
+  swaySpeed:0.015+Math.random()*0.008,
+}));
+
+const buf=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+function px(x,y,c){if(x>=0&&x<COLS&&y>=0&&y<ROWS)buf[y][x]=c;}
+function row(x,y,w,c){for(let i=0;i<w;i++)px(x+i,y,c);}
+function blk(x,y,w,h,c){for(let r=0;r<h;r++)row(x,y+r,w,c);}
+
+function drawSky(){
+  const skys=[C.sky1,C.sky2,C.sky3,C.sky4,C.sky5];
+  for(let r=0;r<GY;r++){
+    const si=Math.min(Math.floor(r/GY*skys.length),skys.length-1);
+    row(0,r,COLS,skys[si]);
+  }
+}
+function drawSun(){
+  const sx=154,sy=6;
+  row(sx+1,sy-3,5,C.sun);row(sx+1,sy+7,5,C.sun);
+  blk(sx-2,sy-1,2,7,C.sun);blk(sx+7,sy-1,2,7,C.sun);
+  blk(sx,sy-2,7,9,C.sun);blk(sx-1,sy-1,9,7,C.sun);
+  blk(sx+1,sy-1,3,3,C.sunhi);
+}
+function drawCloud(cx,cy){
+  const x=Math.round(cx),y=Math.round(cy);
+  blk(x+3,y,6,2,C.cloudsh);blk(x+1,y+1,10,2,C.cloudsh);
+  blk(x,y+2,13,3,C.cloud);blk(x+2,y+1,9,4,C.cloud);blk(x+4,y,6,5,C.cloud);
+}
+function drawGround(){
+  blk(0,GY,COLS,ROWS-GY,C.g1);
+  row(0,GY,COLS,C.g3);row(0,GY+1,COLS,C.g2);
+  for(let x=0;x<COLS;x+=3)px(x,GY-1,C.g3);
+  for(let x=1;x<COLS;x+=5){px(x,GY-2,C.g4);if(x+2<COLS)px(x+2,GY-3,C.g3);}
+}
+
+function flowerYellow(bx,fy){
+  row(bx-1,fy,3,C.py1);
+  blk(bx-3,fy+1,7,1,C.py2);blk(bx-3,fy+2,7,2,C.py3);blk(bx-3,fy+4,7,1,C.py2);
+  row(bx-1,fy+5,3,C.py1);
+  px(bx-3,fy+2,C.py4);px(bx+3,fy+2,C.py4);
+  blk(bx-1,fy+1,3,3,C.yc1);
+  px(bx-1,fy+2,C.yc2);px(bx+1,fy+2,C.yc2);px(bx,fy+2,C.yc3);
+  px(bx-1,fy+1,'#ffca28');
+}
+function flowerOrange(bx,fy){
+  row(bx-1,fy-1,3,C.po1);
+  blk(bx-4,fy,9,1,C.po2);blk(bx-4,fy+1,9,5,C.po2);blk(bx-4,fy+6,9,1,C.po2);
+  row(bx-1,fy+7,3,C.po1);
+  blk(bx-4,fy+1,2,5,C.po3);blk(bx+3,fy+1,2,5,C.po3);
+  blk(bx-2,fy+1,5,5,C.oc1);blk(bx-1,fy+2,3,3,C.oc2);px(bx,fy+3,C.oc3);
+  px(bx-2,fy+1,'#ff8f00');px(bx-1,fy+1,'#ffa000');
+}
+function flowerRed(bx,fy){
+  row(bx-2,fy-2,5,C.pr1);px(bx-4,fy-1,C.pr1);px(bx+4,fy-1,C.pr1);
+  blk(bx-5,fy,11,1,C.pr2);blk(bx-5,fy+1,11,6,C.pr2);blk(bx-5,fy+7,11,1,C.pr2);
+  px(bx-4,fy+8,C.pr1);px(bx+4,fy+8,C.pr1);row(bx-2,fy+9,5,C.pr1);
+  blk(bx-5,fy+1,2,6,C.pr3);blk(bx+4,fy+1,2,6,C.pr3);
+  blk(bx-3,fy+1,7,6,C.rc1);blk(bx-2,fy+2,5,4,C.rc2);blk(bx-1,fy+3,3,2,C.rc3);
+  px(bx-1,fy+2,'#ffa000');px(bx,fy+2,'#ffb300');px(bx+1,fy+2,'#ffa000');
+  px(bx,fy+1,'#ff8f00');
+}
+
+function drawFlower(f,sway,growFrame){
+  const bx=Math.round(f.x+sway);
+  const commits=f.c;
+  if(commits===0)return;
+  const maxStem=Math.min(6+Math.floor(commits*2.5),36);
+  const stemH=Math.round(maxStem*Math.min(growFrame/100,1));
+  const stemTop=GY-stemH;
+  for(let s=0;s<stemH;s++){
+    const sw=Math.round(sway*(s/stemH));
+    px(bx+sw,stemTop+s,C.stem);
+    px(bx+sw+1,stemTop+s,C.stem2);
+  }
+  if(stemH>10&&commits>=3){
+    const ly=GY-Math.floor(stemH*0.42);
+    blk(bx-5,ly,5,1,C.leaf2);blk(bx-6,ly+1,5,1,C.leaf);blk(bx-4,ly+2,3,1,C.leaf3);
+  }
+  if(stemH>14&&commits>=5){
+    const ly2=GY-Math.floor(stemH*0.65);
+    blk(bx+2,ly2,5,1,C.leaf2);blk(bx+3,ly2+1,5,1,C.leaf);blk(bx+2,ly2+2,3,1,C.leaf3);
+  }
+  if(growFrame<65)return;
+  const headY=stemTop-3;
+  if(commits>=9)flowerRed(bx,headY-8);
+  else if(commits>=5)flowerOrange(bx,headY-6);
+  else flowerYellow(bx,headY-4);
+}
+
+// Smart tooltip positioning
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=W/rect.width;
+  const mx=(e.clientX-rect.left)*scaleX;
+  const my=(e.clientY-rect.top)*(H/rect.height);
+  let found=null;
+  flowerData.forEach(f=>{
+    if(f.c===0)return;
+    if(Math.abs(mx-f.x*PX)<PX*5&&my<GY*PX) found=f;
+  });
+  if(found){
+    const label=found.c>=9?'Big bloom 🌺':found.c>=5?'Growing 🌸':'Sprout 🌼';
+    const html=`${found.m||'—'} &nbsp;|&nbsp; <span style="color:#ffe066">${found.c} commits</span> &nbsp;|&nbsp; ${label}`;
+    tip.innerHTML=html;
+    tip.style.display='block';
+
+    // measure tooltip width
+    const tw=tip.offsetWidth+4;
+    const th=tip.offsetHeight+4;
+    const vpW=window.innerWidth;
+    const vpH=window.innerHeight;
+
+    // flip left if too close to right edge
+    let tx=e.clientX+14;
+    if(tx+tw>vpW) tx=e.clientX-tw-10;
+
+    // flip up if too close to bottom
+    let ty=e.clientY-24;
+    if(ty+th>vpH) ty=e.clientY-th-8;
+    if(ty<0) ty=8;
+
+    tip.style.left=tx+'px';
+    tip.style.top=ty+'px';
+  } else {
+    tip.style.display='none';
+  }
+});
+canvas.addEventListener('mouseleave',()=>tip.style.display='none');
+
+let frame=0,growFrame=0;
+function loop(){
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)buf[r][c]=null;
+  drawSky(); drawSun();
+  clouds.forEach(cl=>{
+    cl.x+=cl.speed;
+    if(cl.x>COLS+cl.w) cl.x=-cl.w;
+    drawCloud(Math.round(cl.x),cl.y);
+  });
+  drawGround();
+  if(growFrame<115)growFrame++;
+  flowerData.forEach(f=>{
+    const sway=Math.round(Math.sin(frame*f.swaySpeed+f.swayPhase)*2);
+    drawFlower(f,sway,growFrame);
+  });
+
+  ctx.fillStyle='#111111';
+  ctx.fillRect(0,0,W,H);
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      ctx.fillStyle=buf[r][c]||(r<GY?C.sky5:C.g1);
+      ctx.fillRect(c*PX+1,r*PX+1,PX-1,PX-1);
+    }
+  }
+
+  ctx.fillStyle='rgba(0,0,0,0.82)';
+  ctx.fillRect(0,H-PX*5,W,PX*5);
+
+  ctx.font='bold 10px monospace';
+  ctx.fillStyle='#90caf9';
+  ctx.textAlign='left';
+  flowerData.forEach(f=>{if(f.m)ctx.fillText(f.m,f.x*PX,H-PX*4+2);});
+
+  ctx.font='bold 13px monospace';
+  ctx.fillStyle='#ffe066';
+  ctx.textAlign='center';
+  ctx.fillText("Raghav's Contribution Garden",W/2,H-6);
+
+  ctx.fillStyle='rgba(0,0,0,0.88)';
+  ctx.fillRect(6,6,232,28);
+  ctx.strokeStyle='#ffe066';ctx.lineWidth=1;
+  ctx.strokeRect(6,6,232,28);
+  [[C.py3,'1-4 commits',18],[C.po2,'5-8 commits',96],[C.pr2,'9+ commits',174]].forEach(([c,lbl,x])=>{
+    ctx.fillStyle=c;ctx.fillRect(x,13,12,12);
+    ctx.strokeStyle='#111';ctx.lineWidth=0.5;ctx.strokeRect(x,13,12,12);
+    ctx.fillStyle='#ffffff';ctx.font='bold 11px monospace';
+    ctx.textAlign='left';ctx.fillText(lbl,x+16,24);
+  });
+
+  frame++;
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
