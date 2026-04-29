@@ -52,7 +52,7 @@ def hex_to_rgb(h):
 
 def generate_gif(weeks):
     from PIL import Image, ImageDraw, ImageFont
-    import numpy as np
+
 
     PX = 6
     COLS = 170
