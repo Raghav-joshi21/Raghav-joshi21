@@ -1,4 +1,4 @@
-name: Generate Garden
+name: Generate Pixel Garden
 
 on:
   schedule:
@@ -19,8 +19,8 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Generate garden SVG
-        run: python generate_garden.py
+      - name: Generate pixel garden SVG
+        run: python generate_pixel_garden.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: Raghav-joshi21
