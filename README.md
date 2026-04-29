@@ -59,8 +59,6 @@
 
 ###
 
-<br clear="both">
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Raghav-joshi21 /Raghav-joshi21 /output/pacman-contribution-graph-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Raghav-joshi21 /Raghav-joshi21 /output/pacman-contribution-graph.svg">
