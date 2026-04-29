@@ -61,13 +61,12 @@
 
 ---
 
-<!-- 🌸 Pixel Garden — click to open interactive animated version -->
 <div align="center">
   <a href="https://raghav-joshi21.github.io/Raghav-joshi21/garden.html" target="_blank">
-    <img alt="Raghav's Contribution Garden" src="https://raw.githubusercontent.com/Raghav-joshi21/Raghav-joshi21/output/garden.svg" width="100%"/>
+    <img alt="Raghav's Contribution Garden" src="https://raw.githubusercontent.com/Raghav-joshi21/Raghav-joshi21/output/garden.gif" width="100%"/>
   </a>
   <br/>
-  <sub>🌼 sprout = 1–4 commits &nbsp;|&nbsp; 🌸 growing = 5–8 commits &nbsp;|&nbsp; 🌺 big bloom = 9+ commits &nbsp;|&nbsp; <a href="https://raghav-joshi21.github.io/Raghav-joshi21/garden.html">open interactive ↗</a></sub>
+  <sub>🌼 1–4 commits &nbsp;|&nbsp; 🌸 5–8 commits &nbsp;|&nbsp; 🌺 9+ commits &nbsp;|&nbsp; <a href="https://raghav-joshi21.github.io/Raghav-joshi21/garden.html">open interactive ↗</a></sub>
 </div>
 
 ---
