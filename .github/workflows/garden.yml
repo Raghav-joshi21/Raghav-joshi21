@@ -17,9 +17,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install requests Pillow
 
-      - name: Generate pixel garden SVG
+      - name: Generate pixel garden GIF
         run: python generate_pixel_garden.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
