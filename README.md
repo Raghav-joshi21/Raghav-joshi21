@@ -58,9 +58,7 @@
 ###
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Raghav-joshi21/Raghav-joshi21/output/pacman-contribution-graph-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Raghav-joshi21/Raghav-joshi21/output/pacman-contribution-graph.svg">
-  <img alt="pacman contribution graph" src="https://raw.githubusercontent.com/Raghav-joshi21/Raghav-joshi21/output/pacman-contribution-graph.svg">
+  <img alt="Raghav's garden — commits as flowers" src="https://raw.githubusercontent.com/Raghav-joshi21/Raghav-joshi21/output/garden.svg">
 </picture>
 
 ###
