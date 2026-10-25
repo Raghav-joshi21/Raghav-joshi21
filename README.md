@@ -2,6 +2,8 @@
 
 # 🌱 CS student · AI builder · making tech more human
 
+🌐 **[raghavjoshi.dev](https://raghavjoshi.dev)** · portfolio, projects and blog
+
 </div>
 
 ---
